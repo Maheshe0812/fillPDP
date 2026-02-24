@@ -5,30 +5,8 @@
 </div>
 	<style type='text/css'>
         .embeddedMessagingMinimizedNotification {
-		background-color: rgba(255,255,255, 0.7); !important;
-        }
-            button.embeddedMessagingConversationButton {
-                background-image: url("https://tonal--full--c.sandbox.vf.force.com/resource/1760121258000/TonalChatbot") !important;
-                background-size: 60px 60px !important;
-                background-repeat: no-repeat !important;
-                background-position: center !important;
-                background-color: rgba(0, 112, 210, 0.5); !important;
-                width: 60px !important;
-                height: 60px !important;
-                display: block !important;
-               
-                border: none !important;
-                border-radius: 0 !important;
-            }
-
-            .embeddedMessagingConversationButtonWrapper {
-                box-shadow: none !important;
-                border-radius: 0 !important;
-            }
-        button.embeddedMessagingConversationButton svg {
-                display: none !important;
-            }
-
+            background-color: rgba(255,255,255, 0.85); !important;
+        }   
             
         </style>
   </head>
@@ -51,16 +29,11 @@ function initEmbeddedMessaging() {
       try {
         const raw = sessionStorage.getItem(STORAGE_KEY);
         if (!raw) {
-          console.log("[host persist] No storage found. Using defaults.");
           return;
         }
         const s = JSON.parse(raw);
         humanPresent = !!s.humanPresent;
         allowOpen    = !!s.allowOpen;
-
-        console.log("[host persist] LOADED →",
-          { humanPresent, allowOpen }
-        );
       } catch (e) {
         console.warn("[host persist] Load error:", e);
       }
@@ -72,7 +45,6 @@ function initEmbeddedMessaging() {
           STORAGE_KEY,
           JSON.stringify({ humanPresent, allowOpen })
         );
-        console.log("[host persist] SAVED →", { humanPresent, allowOpen });
       } catch (e) {
         console.warn("[host persist] Save error:", e);
       }
@@ -90,7 +62,8 @@ function initEmbeddedMessaging() {
       "i couldn't capture your email address, do you want to try again?",
       "sorry, i didn't understand that. please provide a valid email address.",
       "we're looking forward to connecting.",
-      "this info will help me connect you with an associate."
+      "this info will help me connect you with an associate.",
+       "to check the status of your order, please enter your tonal order id below"
     ]);
     const norm = s => (s || '').trim().replace(/\s+/g, ' ').toLowerCase();
 
@@ -103,21 +76,12 @@ function initEmbeddedMessaging() {
       if (!iframe?.src) return;
       iframe.contentWindow.postMessage('InputEnable', new URL(iframe.src).origin);
 
-      console.log("%c[composer] ENABLE →",
-        "color: green",
-        { humanPresent, allowOpen }
-      );
     }
 
     function postIframeDisable() {
       const iframe = document.getElementById('embeddedMessagingFrame');
       if (!iframe?.src) return;
       iframe.contentWindow.postMessage('InputDisable', new URL(iframe.src).origin);
-
-      console.log("%c[composer] DISABLE →",
-        "color: crimson",
-        { humanPresent, allowOpen }
-      );
     }
 
 
@@ -125,10 +89,6 @@ function initEmbeddedMessaging() {
     // Single Decision Point
     // ============================================================
     function updateComposer(eventName = "updateComposer") {
-      console.log(`[EVENT → ${eventName}] updateComposer called`, {
-        humanPresent,
-        allowOpen
-      });
 
       if (humanPresent || allowOpen) postIframeEnable();
       else postIframeDisable();
@@ -144,11 +104,6 @@ function initEmbeddedMessaging() {
       const text = norm(raw);
       allowOpen = allowList.has(text);
 
-      console.log(`[bot-text handler] allowOpen=${allowOpen}`, {
-        text,
-        humanPresent,
-        allowOpen
-      });
 
       updateComposer("evaluateAndToggle");
     };
@@ -156,7 +111,6 @@ function initEmbeddedMessaging() {
 
     // Prevent flash on first load
     window.addEventListener("load", () => {
-      console.log("[EVENT → window.load]");
       const iframe = document.getElementById('embeddedMessagingFrame');
       if (iframe) iframe.addEventListener('load', () => updateComposer("iframe.load"));
     });
@@ -166,21 +120,12 @@ function initEmbeddedMessaging() {
     // onEmbeddedMessageSent — Bot/Agent/Customer messages
     // ============================================================
     window.addEventListener('onEmbeddedMessageSent', (event) => {
-      console.log("[EVENT → onEmbeddedMessageSent]", { humanPresent, allowOpen });
-
       const ce = event?.detail?.conversationEntry;
       if (!ce?.entryPayload) return;
 
       try {
         const parsed = JSON.parse(ce.entryPayload);
         const messageText = parsed?.abstractMessage?.staticContent?.text;
-
-        console.log("[onEmbeddedMessageSent] Message Parsed →", {
-          messageText,
-          humanPresent,
-          allowOpen
-        });
-
         window.evaluateAndToggle(messageText);
       } catch (e) {
         console.warn("[onEmbeddedMessageSent] Parse error:", e);
@@ -192,8 +137,6 @@ function initEmbeddedMessaging() {
     // Participant Change — Look for Agent Join
     // ============================================================
     window.addEventListener("onEmbeddedMessagingConversationParticipantChanged", (evt) => {
-      console.log("[EVENT → onEmbeddedMessagingConversationParticipantChanged] Fired");
-
       const entryStr = evt?.detail?.conversationEntry?.entryPayload;
       if (typeof entryStr !== "string") {
         console.warn("[participantChanged] Invalid payload");
@@ -207,9 +150,6 @@ function initEmbeddedMessaging() {
         const first = entries[0] || {};
         const role  = first?.participant?.role;
         const op    = first?.operation;
-
-        console.log("[participantChanged] Parsed →", { role, op });
-
         if (role === "Agent" && op === "add") {
           humanPresent = true;
         }
@@ -219,12 +159,6 @@ function initEmbeddedMessaging() {
         else if (role === "Chatbot" && op === "add") {
           humanPresent = false;
         }
-
-        console.log("[participantChanged] Updated Flags →", {
-          humanPresent,
-          allowOpen
-        });
-
         updateComposer("participantChanged");
       } catch (e) {
         console.error("[participantChanged] Parse error:", e);
@@ -236,26 +170,30 @@ function initEmbeddedMessaging() {
     // Lifecycle Events
     // ============================================================
     window.addEventListener("onEmbeddedMessagingReady", () => {
-      console.log("[EVENT → onEmbeddedMessagingReady]");
-      embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields({"BotSource": "PDP"});
+            localStorage.clear();
+            const PAGES_VISITED_KEY = "chat_pages_history";
+            let pages = JSON.parse(localStorage.getItem(PAGES_VISITED_KEY) || "[]");
+            const currentPath = window.location.href;
+            if (!pages.includes(currentPath)) {
+                pages.push(currentPath);
+            }
+            localStorage.setItem(PAGES_VISITED_KEY, JSON.stringify(pages));
+            const botSourceURL = pages[0];
+      embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields({"BotSource": "Non-PDP", "BotSourceURL":botSourceURL});
       loadState();
       updateComposer("onEmbeddedMessagingReady");
     });
 
     window.addEventListener("onEmbeddedMessagingSessionStarted", () => {
-      console.log("[EVENT → onEmbeddedMessagingSessionStarted]");
       updateComposer("onEmbeddedMessagingSessionStarted");
     });
 
     window.addEventListener("onEmbeddedMessagingSessionStatusUpdate", (evt) => {
-      console.log("[EVENT → onEmbeddedMessagingSessionStatusUpdate]", evt.detail);
-
       const status = String(
         evt?.detail?.status || evt?.detail?.sessionStatus || ""
       ).toLowerCase();
 
       if (status === "ended" || status === "terminated" || status === "closed") {
-        console.log("[sessionStatusUpdate] TERMINAL STATUS → CLEARING STATE");
         humanPresent = false;
         allowOpen = false;
         saveState();
@@ -269,13 +207,13 @@ function initEmbeddedMessaging() {
     // Init Embedded Messaging
     // ============================================================
     embeddedservice_bootstrap.init(
-                '00DSu0000017YcH',
-                'Chatbot_Shopify_Staging',
-                'https://tonal--full.sandbox.my.site.com/ESWChatbotShopifyStagin1760115575505',
-                {
-                    scrt2URL: 'https://tonal--full.sandbox.my.salesforce-scrt.com'
-                }
-            );
+				'00DSu0000017YcH',
+				'Chatbot_Shopify_Staging',
+				'https://tonal--full.sandbox.my.site.com/ESWChatbotShopifyStagin1760115575505',
+				{
+					scrt2URL: 'https://tonal--full.sandbox.my.salesforce-scrt.com'
+				}
+			);
 
   } catch (err) {
     console.error("Error loading Embedded Messaging:", err);
@@ -292,16 +230,11 @@ window.addEventListener("message", (event) => {
     event.data?.method === "EMBEDDED_MESSAGING_DISPATCH_EVENT_TO_HOST" &&
     event.data?.data?.eventDetails?.conversationEntry?.entryPayload
   ) {
-    console.log("[EVENT → DISPATCHER message]", event.data);
-
     try {
       const payload = JSON.parse(
         event.data.data.eventDetails.conversationEntry.entryPayload
       );
       const messageText = payload?.abstractMessage?.staticContent?.text;
-
-      console.log("[dispatcher] Message Parsed →", messageText);
-
       window.evaluateAndToggle?.(messageText);
     } catch (e) {
       console.warn("[dispatcher] Parse error:", e);
@@ -310,10 +243,7 @@ window.addEventListener("message", (event) => {
 });
 </script>
 
-<script
-  type="text/javascript"
-  src="https://tonal--full.sandbox.my.site.com/ESWChatbotShopifyStagin1760115575505/assets/js/bootstrap.min.js"
-  onload="initEmbeddedMessaging()">
-</script>
+<script type='text/javascript' src='https://tonal--full.sandbox.my.site.com/ESWChatbotShopifyStagin1760115575505/assets/js/bootstrap.min.js' onload='initEmbeddedMessaging()'></script>
+
   </body>
 </html>
