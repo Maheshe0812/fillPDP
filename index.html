@@ -185,7 +185,8 @@ function initEmbeddedMessaging() {
             }
             localStorage.setItem(PAGES_VISITED_KEY, JSON.stringify(pages));
             const botSourceURL = pages[0];
-      embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields({"BotSource": "Non-PDP", "BotSourceURL":botSourceURL});
+		let firstPageCr = window.location.href;
+      embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields({"BotSource": "Non-PDP", "BotSourceURL":firstPageCr});
       loadState();
       updateComposer("onEmbeddedMessagingReady");
     });
