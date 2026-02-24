@@ -176,15 +176,6 @@ function initEmbeddedMessaging() {
     // Lifecycle Events
     // ============================================================
     window.addEventListener("onEmbeddedMessagingReady", () => {
-            localStorage.clear();
-            const PAGES_VISITED_KEY = "chat_pages_history";
-            let pages = JSON.parse(localStorage.getItem(PAGES_VISITED_KEY) || "[]");
-            const currentPath = window.location.href;
-            if (!pages.includes(currentPath)) {
-                pages.push(currentPath);
-            }
-            localStorage.setItem(PAGES_VISITED_KEY, JSON.stringify(pages));
-            const botSourceURL = pages[0];
 		let firstPageCr = window.location.href;
       embeddedservice_bootstrap.prechatAPI.setHiddenPrechatFields({"BotSource": "Non-PDP", "BotSourceURL":firstPageCr});
       loadState();
